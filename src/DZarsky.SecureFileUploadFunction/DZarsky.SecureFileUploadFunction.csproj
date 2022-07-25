@@ -6,9 +6,7 @@
 		<UserSecretsId>c8487a64-891e-4415-9175-a0e20e4255fc</UserSecretsId>
 	</PropertyGroup>
 	<ItemGroup>
-		<Content Remove="C:\Users\domin\.nuget\packages\microsoft.azure.cosmos\3.29.0\contentFiles\any\netstandard2.0\ThirdPartyNotice.txt" />
-	</ItemGroup>
-	<ItemGroup>
+		<PackageReference Include="Isopoh.Cryptography.Argon2" Version="1.1.12" />
 		<PackageReference Include="Microsoft.Azure.Cosmos" Version="3.29.0" />
 		<PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
 		<PackageReference Include="Microsoft.Azure.WebJobs.Extensions.OpenApi" Version="1.0.0" />

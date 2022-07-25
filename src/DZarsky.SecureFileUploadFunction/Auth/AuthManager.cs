@@ -4,16 +4,24 @@ using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Isopoh.Cryptography.Argon2;
+using DZarsky.SecureFileUploadFunction.Infrastructure.Security;
 
 namespace DZarsky.SecureFileUploadFunction.Auth
 {
     public class AuthManager
     {
         private readonly CosmosClient _db;
+        private readonly PasswordValidator _validator;
+
         private const string _databaseID = "SecureFileUploadFunction";
         private const string _containerID = "Users";
 
-        public AuthManager(CosmosClient db) => _db = db;
+        public AuthManager(CosmosClient db, PasswordValidator validator)
+        {
+            _db = db;
+            _validator = validator;
+        }
 
         public async Task<AuthResultStatus> ValidateCredentials(Models.User credentials)
         {
@@ -31,7 +39,7 @@ namespace DZarsky.SecureFileUploadFunction.Auth
 
             var user = (await query.ReadNextAsync()).FirstOrDefault();
 
-            if (user == null || user.Password != credentials.Password)
+            if (user == null || !_validator.ValidatePassword(credentials.Password, user.Password))
             {
                 return AuthResultStatus.InvalidLoginOrPassword;
             }
