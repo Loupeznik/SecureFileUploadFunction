@@ -49,7 +49,7 @@ namespace DZarsky.SecureFileUploadFunction
 
             var authResult = await _authManager.ValidateCredentials(credentials);
 
-            if (authResult != AuthResultStatus.Success)
+            if (authResult.Status != AuthResultStatus.Success)
             {
                 return new UnauthorizedResult();
             }
@@ -65,7 +65,7 @@ namespace DZarsky.SecureFileUploadFunction
 
                 var blobClient = new BlobClient(
                     _configuration.GetValue<string>("UploadEndpoint"),
-                    "uploads",
+                    authResult.UserID,
                     file.FileName);
 
                 var result = await blobClient.UploadAsync(memoryStream);

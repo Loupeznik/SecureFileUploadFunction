@@ -4,7 +4,6 @@ using System;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Isopoh.Cryptography.Argon2;
 using DZarsky.SecureFileUploadFunction.Infrastructure.Security;
 
 namespace DZarsky.SecureFileUploadFunction.Auth
@@ -23,11 +22,11 @@ namespace DZarsky.SecureFileUploadFunction.Auth
             _validator = validator;
         }
 
-        public async Task<AuthResultStatus> ValidateCredentials(Models.User credentials)
+        public async Task<AuthResult> ValidateCredentials(Models.User credentials)
         {
             if (string.IsNullOrWhiteSpace(credentials.Login) || string.IsNullOrWhiteSpace(credentials.Password))
             {
-                return AuthResultStatus.InvalidLoginOrPassword;
+                return new AuthResult(AuthResultStatus.InvalidLoginOrPassword);
             }
 
             var container = _db.GetContainer(_databaseID, _containerID);
@@ -41,15 +40,15 @@ namespace DZarsky.SecureFileUploadFunction.Auth
 
             if (user == null || !_validator.ValidatePassword(credentials.Password, user.Password))
             {
-                return AuthResultStatus.InvalidLoginOrPassword;
+                return new AuthResult(AuthResultStatus.InvalidLoginOrPassword);
             }
 
             if (!user.IsActive)
             {
-                return AuthResultStatus.UserInactive;
+                return new AuthResult(AuthResultStatus.UserInactive);
             }
 
-            return AuthResultStatus.Success;
+            return new AuthResult(AuthResultStatus.Success, user.Id);
         }
 
         public static Models.User? ParseToken(string header)
