@@ -1,16 +1,17 @@
 using System;
-using System.IO;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
-using Azure.Storage.Blobs;
+using Azure;
+using Azure.Storage.Blobs.Models;
 using DZarsky.SecureFileUploadFunction.Auth;
+using DZarsky.SecureFileUploadFunction.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Attributes;
 using Microsoft.Azure.WebJobs.Extensions.OpenApi.Core.Enums;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
 
@@ -19,35 +20,26 @@ namespace DZarsky.SecureFileUploadFunction
     public class FileManagementFunction
     {
         private readonly ILogger<FileManagementFunction> _logger;
-        private readonly IConfiguration _configuration;
         private readonly AuthManager _authManager;
+        private readonly FileService _fileService;
 
-        private const string _section = "Files";
+        private const string _section = "files";
 
-        public FileManagementFunction(ILogger<FileManagementFunction> logger, IConfiguration configuration, AuthManager authManager)
+        public FileManagementFunction(ILogger<FileManagementFunction> logger, AuthManager authManager, FileService fileService)
         {
             _logger = logger;
-            _configuration = configuration;
             _authManager = authManager;
+            _fileService = fileService;
         }
 
         [FunctionName("Upload")]
         [OpenApiOperation(operationId: "UploadFile", tags: new[] { _section })]
         [OpenApiSecurity("basic_auth", SecuritySchemeType.Http, Scheme = OpenApiSecuritySchemeType.Basic)]
-        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(object), Description = "File upload")]
-        public async Task<ActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = "upload")] HttpRequest req)
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(Response<BlobContentInfo>), Description = "File upload")]
+        public async Task<ActionResult> UploadFile(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = $"{_section}/upload")] HttpRequest req)
         {
-            var authHeader = req.Headers["Authorization"];
-
-            var credentials = AuthManager.ParseToken(authHeader);
-
-            if (credentials == null)
-            {
-                return new UnauthorizedResult();
-            }
-
-            var authResult = await _authManager.ValidateCredentials(credentials);
+            var authResult = await Authorize(req);
 
             if (authResult.Status != AuthResultStatus.Success)
             {
@@ -58,19 +50,14 @@ namespace DZarsky.SecureFileUploadFunction
             {
                 var file = req.Form.Files["file"];
 
-                using var memoryStream = new MemoryStream();
-                await file.CopyToAsync(memoryStream);
+                if (file.Length < 1)
+                {
+                    return new BadRequestResult();
+                }
 
-                memoryStream.Position = 0;
+                var result = await _fileService.UploadFile(file, authResult.UserID);
 
-                var blobClient = new BlobClient(
-                    _configuration.GetValue<string>("UploadEndpoint"),
-                    authResult.UserID,
-                    file.FileName);
-
-                var result = await blobClient.UploadAsync(memoryStream);
-
-                return new OkObjectResult(result.Value);
+                return new OkObjectResult(result);
             }
             catch (Exception ex)
             {
@@ -82,6 +69,50 @@ namespace DZarsky.SecureFileUploadFunction
                     Exception = ex.Message
                 });
             }
+        }
+
+        [FunctionName("List")]
+        [OpenApiOperation(operationId: "ListFiles", tags: new[] { _section })]
+        [OpenApiSecurity("basic_auth", SecuritySchemeType.Http, Scheme = OpenApiSecuritySchemeType.Basic)]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(IList<BlobItem>), Description = "Get list of files for current user")]
+        public async Task<ActionResult> ListFiles(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = _section)] HttpRequest req)
+        {
+            var authResult = await Authorize(req);
+
+            if (authResult.Status != AuthResultStatus.Success)
+            {
+                return new UnauthorizedResult();
+            }
+
+            try
+            {
+                return new OkObjectResult(await _fileService.ListFiles(authResult.UserID));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Could list files", ex);
+
+                return new BadRequestObjectResult(new
+                {
+                    Message = "An error has accured",
+                    Exception = ex.Message
+                });
+            }
+        }
+
+        private async Task<AuthResult> Authorize(HttpRequest request)
+        {
+            var authHeader = request.Headers["Authorization"];
+
+            var credentials = AuthManager.ParseToken(authHeader);
+
+            if (credentials == null)
+            {
+                return new AuthResult(AuthResultStatus.InvalidLoginOrPassword);
+            }
+
+            return await _authManager.ValidateCredentials(credentials);
         }
     }
 }

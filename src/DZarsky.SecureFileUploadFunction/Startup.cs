@@ -1,6 +1,7 @@
 ﻿using System;
 using DZarsky.SecureFileUploadFunction.Auth;
 using DZarsky.SecureFileUploadFunction.Infrastructure.Security;
+using DZarsky.SecureFileUploadFunction.Services;
 using Microsoft.Azure.Cosmos.Fluent;
 using Microsoft.Azure.Functions.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
@@ -44,6 +45,7 @@ namespace DZarsky.SecureFileUploadFunction
 
             builder.Services.AddScoped<AuthManager>();
             builder.Services.AddScoped<PasswordValidator>();
+            builder.Services.AddScoped<FileService>();
         }
     }
 }
