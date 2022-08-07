@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Storage.Blobs.Models;
@@ -92,6 +94,38 @@ namespace DZarsky.SecureFileUploadFunction
             catch (Exception ex)
             {
                 _logger.LogError("Could list files", ex);
+
+                return new BadRequestObjectResult(new
+                {
+                    Message = "An error has accured",
+                    Exception = ex.Message
+                });
+            }
+        }
+
+        [FunctionName("Download")]
+        [OpenApiOperation(operationId: "GetFile", tags: new[] { _section })]
+        [OpenApiSecurity("basic_auth", SecuritySchemeType.Http, Scheme = OpenApiSecuritySchemeType.Basic)]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/octet-stream", bodyType: typeof(object), Description = "Download file by ID")]
+        public async Task<ActionResult> GetFile(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = _section + "/{fileName}")] HttpRequest req, string fileName)
+        {
+            var authResult = await Authorize(req);
+
+            if (authResult.Status != AuthResultStatus.Success)
+            {
+                return new UnauthorizedResult();
+            }
+
+            try
+            {
+                var result = await _fileService.GetFile(authResult.UserID, fileName);
+
+                return new PhysicalFileResult(result.TemporaryPath, result.ContentType);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Could download file", ex);
 
                 return new BadRequestObjectResult(new
                 {

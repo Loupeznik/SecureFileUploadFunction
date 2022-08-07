@@ -1,10 +1,13 @@
 ﻿using Azure;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using DZarsky.SecureFileUploadFunction.Services.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using System.IO;
 using System.Threading.Tasks;
+using DZarsky.SecureFileUploadFunction.Services.Helpers;
+using System;
 
 namespace DZarsky.SecureFileUploadFunction.Services
 {
@@ -41,6 +44,23 @@ namespace DZarsky.SecureFileUploadFunction.Services
                 userID);
 
             return Task.FromResult(blobClient.GetBlobsAsync());
+        }
+
+        public async Task<GetFileResult> GetFile(string userID, string fileName)
+        {
+            var blobClient = new BlobClient(
+                _configuration.GetValue<string>("UploadEndpoint"),
+                userID,
+                fileName);
+
+            var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.{Path.GetExtension(fileName)}");
+
+            using var stream = await blobClient.OpenReadAsync();
+
+            using var fileStream = File.OpenWrite(tempPath);
+            await stream.CopyToAsync(fileStream);
+
+            return new GetFileResult(tempPath, MimeTypeHelper.ResolveMimeType(tempPath));
         }
 
         private async Task CreateContainer(string userID)
