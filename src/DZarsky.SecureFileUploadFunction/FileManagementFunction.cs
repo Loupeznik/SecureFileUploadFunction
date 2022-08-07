@@ -1,12 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
-using System.Text;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Storage.Blobs.Models;
 using DZarsky.SecureFileUploadFunction.Auth;
+using DZarsky.SecureFileUploadFunction.Infrastructure.Api;
 using DZarsky.SecureFileUploadFunction.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -65,11 +64,7 @@ namespace DZarsky.SecureFileUploadFunction
             {
                 _logger.LogError("Could not upload file", ex);
 
-                return new BadRequestObjectResult(new
-                {
-                    Message = "An error has accured",
-                    Exception = ex.Message
-                });
+                return new BadRequestObjectResult(new ErrorResponse(ex.Message));
             }
         }
 
@@ -95,11 +90,7 @@ namespace DZarsky.SecureFileUploadFunction
             {
                 _logger.LogError("Could list files", ex);
 
-                return new BadRequestObjectResult(new
-                {
-                    Message = "An error has accured",
-                    Exception = ex.Message
-                });
+                return new BadRequestObjectResult(new ErrorResponse(ex.Message));
             }
         }
 
@@ -127,11 +118,7 @@ namespace DZarsky.SecureFileUploadFunction
             {
                 _logger.LogError("Could download file", ex);
 
-                return new BadRequestObjectResult(new
-                {
-                    Message = "An error has accured",
-                    Exception = ex.Message
-                });
+                return new BadRequestObjectResult(new ErrorResponse(ex.Message));
             }
         }
 

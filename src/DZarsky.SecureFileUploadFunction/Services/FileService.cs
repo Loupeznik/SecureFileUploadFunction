@@ -17,41 +17,41 @@ namespace DZarsky.SecureFileUploadFunction.Services
 
         public FileService(IConfiguration configuration) => _configuration = configuration;
 
-        public async Task<Response<BlobContentInfo>> UploadFile(IFormFile file, string userID)
+        public async Task<UploadFileResult> UploadFile(IFormFile file, string userID)
         {
             using var memoryStream = new MemoryStream();
             await file.CopyToAsync(memoryStream);
 
             memoryStream.Position = 0;
 
-            var blobClient = new BlobClient(
-                _configuration.GetValue<string>("UploadEndpoint"),
-                userID,
-                file.FileName);
+            var blobClient = GetBlobClient(userID, file.FileName);
+            var containerExists = await GetBlobContainerClient(userID).ExistsAsync();
 
-            if (!await blobClient.ExistsAsync())
+            if (!containerExists.Value)
             {
                 await CreateContainer(userID);
             }
 
-            return await blobClient.UploadAsync(memoryStream);
+            if (await blobClient.ExistsAsync())
+            {
+                return new UploadFileResult(UploadFileResultStatus.AlreadyExists);
+            }
+
+            var result = await blobClient.UploadAsync(memoryStream);
+
+            return new UploadFileResult(UploadFileResultStatus.Success, result.Value);
         }
 
         public Task<AsyncPageable<BlobItem>> ListFiles(string userID)
         {
-            var blobClient = new BlobContainerClient(
-                _configuration.GetValue<string>("UploadEndpoint"),
-                userID);
+            var blobClient = GetBlobContainerClient(userID);
 
             return Task.FromResult(blobClient.GetBlobsAsync());
         }
 
         public async Task<GetFileResult> GetFile(string userID, string fileName)
         {
-            var blobClient = new BlobClient(
-                _configuration.GetValue<string>("UploadEndpoint"),
-                userID,
-                fileName);
+            var blobClient = GetBlobClient(userID, fileName);
 
             var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.{Path.GetExtension(fileName)}");
 
@@ -63,13 +63,15 @@ namespace DZarsky.SecureFileUploadFunction.Services
             return new GetFileResult(tempPath, MimeTypeHelper.ResolveMimeType(tempPath));
         }
 
-        private async Task CreateContainer(string userID)
-        {
-            var containerClient = new BlobContainerClient(
+        private async Task CreateContainer(string userID) => await GetBlobContainerClient(userID).CreateAsync();
+
+        private BlobClient GetBlobClient(string userID, string fileName) => new(
+                _configuration.GetValue<string>("UploadEndpoint"),
+                userID,
+                fileName);
+
+        private BlobContainerClient GetBlobContainerClient(string userID) => new(
                 _configuration.GetValue<string>("UploadEndpoint"),
                 userID);
-
-            await containerClient.CreateAsync();
-        }
     }
 }

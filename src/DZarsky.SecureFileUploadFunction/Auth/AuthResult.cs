@@ -1,4 +1,7 @@
-﻿namespace DZarsky.SecureFileUploadFunction.Auth
+﻿using Newtonsoft.Json.Converters;
+using Newtonsoft.Json;
+
+namespace DZarsky.SecureFileUploadFunction.Auth
 {
     public class AuthResult
     {
@@ -13,6 +16,7 @@
         }
     }
 
+    [JsonConverter(typeof(StringEnumConverter))]
     public enum AuthResultStatus
     {
         Success,
