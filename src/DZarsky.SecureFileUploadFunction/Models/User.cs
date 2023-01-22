@@ -1,11 +1,11 @@
 ﻿using System;
-using System.Text.Json.Serialization;
+using Newtonsoft.Json;
 
 namespace DZarsky.SecureFileUploadFunction.Models
 {
     public class User
     {
-        [JsonPropertyName("id")]
+        [JsonProperty("id")]
         public string? Id { get; set; }
 
         public string? Login { get; set; }

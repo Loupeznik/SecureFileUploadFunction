@@ -45,7 +45,9 @@ namespace DZarsky.SecureFileUploadFunction
 
             builder.Services.AddScoped<AuthManager>();
             builder.Services.AddScoped<PasswordValidator>();
+            builder.Services.AddScoped<PasswordHasher>();
             builder.Services.AddScoped<FileService>();
+            builder.Services.AddScoped<UserService>();
         }
     }
 }

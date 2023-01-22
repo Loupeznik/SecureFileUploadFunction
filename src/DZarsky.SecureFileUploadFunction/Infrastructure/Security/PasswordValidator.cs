@@ -1,16 +1,15 @@
 ﻿using Isopoh.Cryptography.Argon2;
-using Microsoft.Extensions.Configuration;
-using System;
-using System.Security.Cryptography;
-using System.Text;
 
 namespace DZarsky.SecureFileUploadFunction.Infrastructure.Security
 {
     public class PasswordValidator
     {
-        private readonly IConfiguration _configuration;
+        private readonly PasswordHasher _passwordHasher;
 
-        public PasswordValidator(IConfiguration configuration) => _configuration = configuration;
+        public PasswordValidator(PasswordHasher passwordHasher)
+        {
+            _passwordHasher = passwordHasher;
+        }
 
         /// <summary>
         /// Validates the input password against a saved hashed password
@@ -20,22 +19,7 @@ namespace DZarsky.SecureFileUploadFunction.Infrastructure.Security
         /// <returns>Returns true if validation is successfull, otherwise returns false</returns>
         public bool ValidatePassword(string password, string hashedPassword)
         {
-            var salt = new byte[16];
-            RandomNumberGenerator.Create().GetBytes(salt);
-
-            var config = new Argon2Config
-            {
-                Type = Argon2Type.DataIndependentAddressing,
-                Version = Argon2Version.Nineteen,
-                TimeCost = 10,
-                MemoryCost = 32768,
-                Lanes = 5,
-                Threads = Environment.ProcessorCount,
-                Password = Encoding.UTF8.GetBytes(password),
-                Salt = salt,
-                Secret = Encoding.UTF8.GetBytes(_configuration.GetValue<string>("ArgonSecret")),
-                HashLength = 20
-            };
+            var config = _passwordHasher.GetHasherConfiguration(password);
 
             if (Argon2.Verify(hashedPassword, config))
             {
