@@ -2,14 +2,11 @@
 
 namespace DZarsky.SecureFileUploadFunction.Infrastructure.Security
 {
-    public class PasswordValidator
+    public sealed class PasswordValidator
     {
         private readonly PasswordHasher _passwordHasher;
 
-        public PasswordValidator(PasswordHasher passwordHasher)
-        {
-            _passwordHasher = passwordHasher;
-        }
+        public PasswordValidator(PasswordHasher passwordHasher) => _passwordHasher = passwordHasher;
 
         /// <summary>
         /// Validates the input password against a saved hashed password

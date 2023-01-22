@@ -5,16 +5,14 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using DZarsky.SecureFileUploadFunction.Infrastructure.Security;
+using DZarsky.SecureFileUploadFunction.Common;
 
 namespace DZarsky.SecureFileUploadFunction.Auth
 {
-    public class AuthManager
+    public sealed class AuthManager
     {
         private readonly CosmosClient _db;
         private readonly PasswordValidator _validator;
-
-        private const string _databaseID = "SecureFileUploadFunction";
-        private const string _containerID = "Users";
 
         public AuthManager(CosmosClient db, PasswordValidator validator)
         {
@@ -29,7 +27,7 @@ namespace DZarsky.SecureFileUploadFunction.Auth
                 return new AuthResult(AuthResultStatus.InvalidLoginOrPassword);
             }
 
-            var container = _db.GetContainer(_databaseID, _containerID);
+            var container = _db.GetContainer(CosmosConstants.DatabaseID, CosmosConstants.ContainerID);
 
             var query = container
                 .GetItemLinqQueryable<Models.User>()

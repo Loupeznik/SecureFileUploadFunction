@@ -1,4 +1,5 @@
-﻿using Isopoh.Cryptography.Argon2;
+﻿using DZarsky.SecureFileUploadFunction.Infrastructure.Configuration;
+using Isopoh.Cryptography.Argon2;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Security.Cryptography;
@@ -27,7 +28,7 @@ namespace DZarsky.SecureFileUploadFunction.Infrastructure.Security
                 Threads = Environment.ProcessorCount,
                 Password = Encoding.UTF8.GetBytes(password),
                 Salt = salt,
-                Secret = Encoding.UTF8.GetBytes(_configuration.GetValue<string>("ArgonSecret")),
+                Secret = Encoding.UTF8.GetBytes(_configuration.GetValueFromContainer<string>("ArgonSecret")),
                 HashLength = 20
             };
         }

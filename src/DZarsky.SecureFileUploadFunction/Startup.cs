@@ -1,5 +1,6 @@
 ﻿using System;
 using DZarsky.SecureFileUploadFunction.Auth;
+using DZarsky.SecureFileUploadFunction.Infrastructure.Configuration;
 using DZarsky.SecureFileUploadFunction.Infrastructure.Security;
 using DZarsky.SecureFileUploadFunction.Services;
 using Microsoft.Azure.Cosmos.Fluent;
@@ -23,14 +24,14 @@ namespace DZarsky.SecureFileUploadFunction
         {
             builder.Services.AddSingleton((s) =>
             {
-                var endpoint = configuration.GetSection("CosmosDB").GetValue<string>("Endpoint");
+                var endpoint = configuration.GetValueFromContainer<string>("CosmosDB.Endpoint");
 
                 if (string.IsNullOrWhiteSpace(endpoint))
                 {
                     throw new ArgumentException("CosmosDB endpoint was not set");
                 }
 
-                string authKey = configuration.GetSection("CosmosDB").GetValue<string>("AuthorizationKey");
+                string authKey = configuration.GetValueFromContainer<string>("CosmosDB.AuthorizationKey");
 
                 if (string.IsNullOrWhiteSpace(authKey))
                 {

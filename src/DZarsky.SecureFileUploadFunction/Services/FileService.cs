@@ -8,6 +8,7 @@ using System.IO;
 using System.Threading.Tasks;
 using DZarsky.SecureFileUploadFunction.Services.Helpers;
 using System;
+using DZarsky.SecureFileUploadFunction.Infrastructure.Configuration;
 
 namespace DZarsky.SecureFileUploadFunction.Services
 {
@@ -76,12 +77,12 @@ namespace DZarsky.SecureFileUploadFunction.Services
         private async Task CreateContainer(string userID) => await GetBlobContainerClient(userID).CreateAsync();
 
         private BlobClient GetBlobClient(string userID, string fileName) => new(
-                _configuration.GetValue<string>("UploadEndpoint"),
+                _configuration.GetValueFromContainer<string>("UploadEndpoint"),
                 userID,
                 fileName);
 
         private BlobContainerClient GetBlobContainerClient(string userID) => new(
-                _configuration.GetValue<string>("UploadEndpoint"),
+                _configuration.GetValueFromContainer<string>("UploadEndpoint"),
                 userID);
     }
 }

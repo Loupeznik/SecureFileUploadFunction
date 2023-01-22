@@ -5,6 +5,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Azure.Storage.Blobs.Models;
 using DZarsky.SecureFileUploadFunction.Common;
+using DZarsky.SecureFileUploadFunction.Infrastructure.Configuration;
 using DZarsky.SecureFileUploadFunction.Models;
 using DZarsky.SecureFileUploadFunction.Services;
 using DZarsky.SecureFileUploadFunction.Services.Models;
@@ -45,7 +46,7 @@ namespace DZarsky.SecureFileUploadFunction
         {
             var isApiKeyFilled = req.Headers.TryGetValue(ApiConstants.AuthApiKeyHeader, out var apiKey);
 
-            if (!isApiKeyFilled || apiKey.FirstOrDefault() != _configuration.GetValue<string>("SignUpSecret"))
+            if (!isApiKeyFilled || apiKey.FirstOrDefault() != _configuration.GetValueFromContainer<string>("SignUpSecret"))
             {
                 return new BadRequestObjectResult(new ProblemDetails
                 {
