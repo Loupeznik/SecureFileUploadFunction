@@ -1,6 +1,4 @@
-﻿using System.IO;
-
-namespace DZarsky.SecureFileUploadFunction.Services.Models
+﻿namespace DZarsky.SecureFileUploadFunction.Services.Models
 {
     public class GetFileResult
     {

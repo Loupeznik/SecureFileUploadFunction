@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Azure;
 using Azure.Storage.Blobs.Models;
 using DZarsky.SecureFileUploadFunction.Auth;
+using DZarsky.SecureFileUploadFunction.Common;
 using DZarsky.SecureFileUploadFunction.Infrastructure.Api;
 using DZarsky.SecureFileUploadFunction.Services;
 using Microsoft.AspNetCore.Http;
@@ -24,8 +25,6 @@ namespace DZarsky.SecureFileUploadFunction
         private readonly AuthManager _authManager;
         private readonly FileService _fileService;
 
-        private const string _section = "files";
-
         public FileManagementFunction(ILogger<FileManagementFunction> logger, AuthManager authManager, FileService fileService)
         {
             _logger = logger;
@@ -34,11 +33,11 @@ namespace DZarsky.SecureFileUploadFunction
         }
 
         [FunctionName("Upload")]
-        [OpenApiOperation(operationId: "UploadFile", tags: new[] { _section })]
-        [OpenApiSecurity("basic_auth", SecuritySchemeType.Http, Scheme = OpenApiSecuritySchemeType.Basic)]
-        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(Response<BlobContentInfo>), Description = "File upload")]
+        [OpenApiOperation(operationId: "UploadFile", tags: new[] { ApiConstants.FilesSectionName })]
+        [OpenApiSecurity(ApiConstants.BasicAuthSchemeID, SecuritySchemeType.Http, Scheme = OpenApiSecuritySchemeType.Basic)]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: ApiConstants.JsonContentType, bodyType: typeof(Response<BlobContentInfo>), Description = "File upload")]
         public async Task<ActionResult> UploadFile(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = $"{_section}/upload")] HttpRequest req)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = $"{ApiConstants.FilesSectionName}/upload")] HttpRequest req)
         {
             var authResult = await Authorize(req);
 
@@ -69,11 +68,11 @@ namespace DZarsky.SecureFileUploadFunction
         }
 
         [FunctionName("List")]
-        [OpenApiOperation(operationId: "ListFiles", tags: new[] { _section })]
-        [OpenApiSecurity("basic_auth", SecuritySchemeType.Http, Scheme = OpenApiSecuritySchemeType.Basic)]
-        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/json", bodyType: typeof(IList<BlobItem>), Description = "Get list of files for current user")]
+        [OpenApiOperation(operationId: "ListFiles", tags: new[] { ApiConstants.FilesSectionName })]
+        [OpenApiSecurity(ApiConstants.BasicAuthSchemeID, SecuritySchemeType.Http, Scheme = OpenApiSecuritySchemeType.Basic)]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: ApiConstants.JsonContentType, bodyType: typeof(IList<BlobItem>), Description = "Get list of files for current user")]
         public async Task<ActionResult> ListFiles(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = _section)] HttpRequest req)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = ApiConstants.FilesSectionName)] HttpRequest req)
         {
             var authResult = await Authorize(req);
 
@@ -84,7 +83,19 @@ namespace DZarsky.SecureFileUploadFunction
 
             try
             {
-                return new OkObjectResult(await _fileService.ListFiles(authResult.UserID));
+                var result = await _fileService.ListFiles(authResult.UserID);
+
+                if (result.Status == Services.Models.ResultStatus.Failed)
+                {
+                    return new NotFoundObjectResult(new ProblemDetails
+                    {
+                        Title = "Not found",
+                        Detail = result.ErrorMessage,
+                        Status = 404
+                    });
+                }
+
+                return new OkObjectResult(result.Result);
             }
             catch (Exception ex)
             {
@@ -95,11 +106,11 @@ namespace DZarsky.SecureFileUploadFunction
         }
 
         [FunctionName("Download")]
-        [OpenApiOperation(operationId: "GetFile", tags: new[] { _section })]
-        [OpenApiSecurity("basic_auth", SecuritySchemeType.Http, Scheme = OpenApiSecuritySchemeType.Basic)]
+        [OpenApiOperation(operationId: "GetFile", tags: new[] { ApiConstants.FilesSectionName })]
+        [OpenApiSecurity(ApiConstants.BasicAuthSchemeID, SecuritySchemeType.Http, Scheme = OpenApiSecuritySchemeType.Basic)]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/octet-stream", bodyType: typeof(object), Description = "Download file by ID")]
         public async Task<ActionResult> GetFile(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = _section + "/{fileName}")] HttpRequest req, string fileName)
+            [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = ApiConstants.FilesSectionName + "/{fileName}")] HttpRequest req, string fileName)
         {
             var authResult = await Authorize(req);
 
@@ -112,7 +123,17 @@ namespace DZarsky.SecureFileUploadFunction
             {
                 var result = await _fileService.GetFile(authResult.UserID, fileName);
 
-                return new PhysicalFileResult(result.TemporaryPath, result.ContentType);
+                if (result.Status == Services.Models.ResultStatus.Failed)
+                {
+                    return new NotFoundObjectResult(new ProblemDetails
+                    {
+                        Title = "Not found",
+                        Detail = result.ErrorMessage,
+                        Status = 404
+                    });
+                }
+
+                return new PhysicalFileResult(result.Result.TemporaryPath, result.Result.ContentType);
             }
             catch (Exception ex)
             {

@@ -11,7 +11,7 @@ using System;
 
 namespace DZarsky.SecureFileUploadFunction.Services
 {
-    public class FileService
+    public sealed class FileService
     {
         private readonly IConfiguration _configuration;
 
@@ -34,24 +34,34 @@ namespace DZarsky.SecureFileUploadFunction.Services
 
             if (await blobClient.ExistsAsync())
             {
-                return new UploadFileResult(UploadFileResultStatus.AlreadyExists);
+                return new UploadFileResult(ResultStatus.AlreadyExists);
             }
 
             var result = await blobClient.UploadAsync(memoryStream);
 
-            return new UploadFileResult(UploadFileResultStatus.Success, result.Value);
+            return new UploadFileResult(ResultStatus.Success, result.Value);
         }
 
-        public Task<AsyncPageable<BlobItem>> ListFiles(string userID)
+        public async Task<BlobResultWrapper<AsyncPageable<BlobItem>>> ListFiles(string userID)
         {
             var blobClient = GetBlobContainerClient(userID);
 
-            return Task.FromResult(blobClient.GetBlobsAsync());
+            if (!await blobClient.ExistsAsync())
+            {
+                return new BlobResultWrapper<AsyncPageable<BlobItem>>(ResultStatus.Failed, "Container does not exist");
+            }
+
+            return new BlobResultWrapper<AsyncPageable<BlobItem>>(ResultStatus.Success, result: blobClient.GetBlobsAsync());
         }
 
-        public async Task<GetFileResult> GetFile(string userID, string fileName)
+        public async Task<BlobResultWrapper<GetFileResult>> GetFile(string userID, string fileName)
         {
             var blobClient = GetBlobClient(userID, fileName);
+
+            if (!await blobClient.ExistsAsync())
+            {
+                return new BlobResultWrapper<GetFileResult>(ResultStatus.Failed, "Blob does not exist");
+            }
 
             var tempPath = Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.{Path.GetExtension(fileName)}");
 
@@ -60,7 +70,7 @@ namespace DZarsky.SecureFileUploadFunction.Services
             using var fileStream = File.OpenWrite(tempPath);
             await stream.CopyToAsync(fileStream);
 
-            return new GetFileResult(tempPath, MimeTypeHelper.ResolveMimeType(tempPath));
+            return new BlobResultWrapper<GetFileResult>(ResultStatus.Success, result: new GetFileResult(tempPath, MimeTypeHelper.ResolveMimeType(tempPath)));
         }
 
         private async Task CreateContainer(string userID) => await GetBlobContainerClient(userID).CreateAsync();
