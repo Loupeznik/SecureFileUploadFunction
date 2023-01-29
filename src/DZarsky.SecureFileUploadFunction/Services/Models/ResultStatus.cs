@@ -8,6 +8,7 @@ namespace DZarsky.SecureFileUploadFunction.Services.Models
     {
         Success,
         AlreadyExists,
-        Failed
+        Failed,
+        NotFound
     }
 }

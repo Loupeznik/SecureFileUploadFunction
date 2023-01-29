@@ -14,14 +14,16 @@ namespace DZarsky.SecureFileUploadFunction.Services
     {
         private readonly CosmosClient _db;
         private readonly PasswordHasher _passwordHasher;
+        private readonly PasswordValidator _passwordValidator;
 
-        public UserService(CosmosClient db, PasswordHasher hasher)
+        public UserService(CosmosClient db, PasswordHasher hasher, PasswordValidator validator)
         {
             _db = db;
             _passwordHasher = hasher;
+            _passwordValidator = validator;
         }
 
-        public async Task<CreateUserResult> CreateUser(UserDto credentials)
+        public async Task<UserInfoResult> CreateUser(UserDto credentials)
         {
             var container = _db.GetContainer(CosmosConstants.DatabaseID, CosmosConstants.ContainerID);
 
@@ -32,7 +34,7 @@ namespace DZarsky.SecureFileUploadFunction.Services
 
             if ((await userByLogin.ReadNextAsync()).Any())
             {
-                return new CreateUserResult(ResultStatus.AlreadyExists);
+                return new UserInfoResult(ResultStatus.AlreadyExists);
             }
 
             var hashedPassword = _passwordHasher.HashPassword(credentials.Password);
@@ -49,12 +51,33 @@ namespace DZarsky.SecureFileUploadFunction.Services
 
             if (response.StatusCode != System.Net.HttpStatusCode.Created)
             {
-                return new CreateUserResult(ResultStatus.Failed);
+                return new UserInfoResult(ResultStatus.Failed);
             }
 
             response.Resource.Password = null;
 
-            return new CreateUserResult(ResultStatus.Success, response.Resource);
+            return new UserInfoResult(ResultStatus.Success, response.Resource);
+        }
+
+        public async Task<UserInfoResult> GetInfo(UserDto credentials)
+        {
+            var container = _db.GetContainer(CosmosConstants.DatabaseID, CosmosConstants.ContainerID);
+
+            var userByLogin = container
+                .GetItemLinqQueryable<SecureFileUploadFunction.Models.User>()
+                .Where(x => x.Login == credentials.Login)
+                .ToFeedIterator();
+
+            var user = (await userByLogin.ReadNextAsync()).FirstOrDefault();
+
+            if (user == null || !_passwordValidator.ValidatePassword(credentials.Password, user.Password))
+            {
+                return new UserInfoResult(ResultStatus.NotFound);
+            }
+
+            user.Password = null;
+
+            return new UserInfoResult(ResultStatus.Success, user);
         }
     }
 }

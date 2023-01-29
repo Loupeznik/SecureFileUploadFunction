@@ -38,9 +38,10 @@ namespace DZarsky.SecureFileUploadFunction
         [OpenApiOperation(operationId: "CreateUser", tags: new[] { ApiConstants.AuthSectionName })]
         [OpenApiRequestBody(ApiConstants.JsonContentType, typeof(UserDto))]
         [OpenApiSecurity(ApiConstants.ApiKeyAuthSchemeID, SecuritySchemeType.ApiKey, In = OpenApiSecurityLocationType.Header, Name = ApiConstants.AuthApiKeyHeader)]
-        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: ApiConstants.JsonContentType, bodyType: typeof(CreateUserResult), Description = "Success")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: ApiConstants.JsonContentType, bodyType: typeof(UserInfoResult), Description = "Success")]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.BadRequest, contentType: ApiConstants.JsonContentType, bodyType: typeof(ProblemDetails), Description = "Bad request")]
         [OpenApiResponseWithBody(statusCode: HttpStatusCode.Unauthorized, contentType: ApiConstants.JsonContentType, bodyType: typeof(ProblemDetails), Description = "Unauthorized")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.Conflict, contentType: ApiConstants.JsonContentType, bodyType: typeof(ProblemDetails), Description = "Conflict")]
         public async Task<IActionResult> CreateUser(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = $"{ApiConstants.AuthSectionName}/signup")] UserDto user, HttpRequest req)
         {
@@ -74,7 +75,63 @@ namespace DZarsky.SecureFileUploadFunction
                 {
                     Title = "Conflict",
                     Detail = "Record with given username already exists",
-                    Status = 429
+                    Status = 409
+                });
+            }
+            else if (result.Status == ResultStatus.Failed)
+            {
+                return new BadRequestObjectResult(new ProblemDetails
+                {
+                    Title = "Bad Request",
+                    Detail = "Failed to create account",
+                    Status = 400
+                });
+            }
+
+            return new OkObjectResult(result.User);
+        }
+
+        [FunctionName("GetUserInfo")]
+        [OpenApiOperation(operationId: "GetUserInfo", tags: new[] { ApiConstants.AuthSectionName })]
+        [OpenApiRequestBody(ApiConstants.JsonContentType, typeof(UserDto))]
+        [OpenApiSecurity(ApiConstants.ApiKeyAuthSchemeID, SecuritySchemeType.ApiKey, In = OpenApiSecurityLocationType.Header, Name = ApiConstants.AuthApiKeyHeader)]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: ApiConstants.JsonContentType, bodyType: typeof(UserInfoResult), Description = "Success")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.BadRequest, contentType: ApiConstants.JsonContentType, bodyType: typeof(ProblemDetails), Description = "Bad request")]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.Unauthorized, contentType: ApiConstants.JsonContentType, bodyType: typeof(ProblemDetails), Description = "Unauthorized")]
+        public async Task<IActionResult> GetInfo(
+    [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = $"{ApiConstants.AuthSectionName}/info")] UserDto user, HttpRequest req)
+        {
+            var isApiKeyFilled = req.Headers.TryGetValue(ApiConstants.AuthApiKeyHeader, out var apiKey);
+
+            if (!isApiKeyFilled || apiKey.FirstOrDefault() != _configuration.GetValueFromContainer<string>("SignUpSecret"))
+            {
+                return new BadRequestObjectResult(new ProblemDetails
+                {
+                    Title = "Unauthorized",
+                    Detail = "API key is missing or incorrect",
+                    Status = 401
+                });
+            }
+
+            if (string.IsNullOrWhiteSpace(user.Login) || string.IsNullOrWhiteSpace(user.Password))
+            {
+                return new BadRequestObjectResult(new ProblemDetails
+                {
+                    Title = "Bad request",
+                    Detail = "Login or password were empty",
+                    Status = 400
+                });
+            }
+
+            var result = await _userService.GetInfo(user);
+
+            if (result.Status == ResultStatus.NotFound)
+            {
+                return new NotFoundObjectResult(new ProblemDetails
+                {
+                    Title = "Not Found",
+                    Detail = "Record does not exist",
+                    Status = 404
                 });
             }
             else if (result.Status == ResultStatus.Failed)
