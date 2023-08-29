@@ -4,7 +4,8 @@ using System.Net;
 using System.Threading.Tasks;
 using Azure;
 using Azure.Storage.Blobs.Models;
-using DZarsky.SecureFileUploadFunction.Auth;
+using DZarsky.CommonLibraries.AzureFunctions.Models.Auth;
+using DZarsky.CommonLibraries.AzureFunctions.Security;
 using DZarsky.SecureFileUploadFunction.Common;
 using DZarsky.SecureFileUploadFunction.Infrastructure.Api;
 using DZarsky.SecureFileUploadFunction.Services;
@@ -22,14 +23,14 @@ namespace DZarsky.SecureFileUploadFunction
     public class FileManagementFunction
     {
         private readonly ILogger<FileManagementFunction> _logger;
-        private readonly AuthManager _authManager;
         private readonly FileService _fileService;
+        private readonly IAuthManager _authManager;
 
-        public FileManagementFunction(ILogger<FileManagementFunction> logger, AuthManager authManager, FileService fileService)
+        public FileManagementFunction(ILogger<FileManagementFunction> logger, FileService fileService, IAuthManager authManager)
         {
             _logger = logger;
-            _authManager = authManager;
             _fileService = fileService;
+            _authManager = authManager;
         }
 
         [FunctionName("Upload")]
@@ -143,18 +144,6 @@ namespace DZarsky.SecureFileUploadFunction
             }
         }
 
-        private async Task<AuthResult> Authorize(HttpRequest request)
-        {
-            var authHeader = request.Headers["Authorization"];
-
-            var credentials = AuthManager.ParseToken(authHeader);
-
-            if (credentials == null)
-            {
-                return new AuthResult(AuthResultStatus.InvalidLoginOrPassword);
-            }
-
-            return await _authManager.ValidateCredentials(credentials);
-        }
+        private async Task<AuthResult> Authorize(HttpRequest request) => await _authManager.ValidateToken(request.Headers.Authorization);
     }
 }
