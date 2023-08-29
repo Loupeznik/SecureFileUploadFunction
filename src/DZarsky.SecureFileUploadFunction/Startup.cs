@@ -20,7 +20,7 @@ namespace DZarsky.SecureFileUploadFunction
 
         public override void Configure(IFunctionsHostBuilder builder)
         {
-            builder.AddCommonFunctionServices(_configuration, AuthType.Zitadel);
+            builder.AddCommonFunctionServices(_configuration, AuthType.Zitadel, false);
 
             builder.Services.AddScoped<FileService>();
         }
