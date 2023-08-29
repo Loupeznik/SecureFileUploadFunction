@@ -6,7 +6,7 @@
 		<UserSecretsId>c8487a64-891e-4415-9175-a0e20e4255fc</UserSecretsId>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="DZarsky.CommonLibraries.AzureFunctions" Version="1.2.0" />
+		<PackageReference Include="DZarsky.CommonLibraries.AzureFunctions" Version="1.2.1" />
 		<PackageReference Include="Isopoh.Cryptography.Argon2" Version="1.1.12" />
 		<PackageReference Include="Microsoft.Azure.Cosmos" Version="3.35.3" />
 		<PackageReference Include="Microsoft.Azure.Functions.Extensions" Version="1.1.0" />
