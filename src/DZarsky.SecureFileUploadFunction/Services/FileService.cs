@@ -8,7 +8,7 @@ using System.IO;
 using System.Threading.Tasks;
 using DZarsky.SecureFileUploadFunction.Services.Helpers;
 using System;
-using DZarsky.SecureFileUploadFunction.Infrastructure.Configuration;
+using DZarsky.CommonLibraries.AzureFunctions.Extensions;
 
 namespace DZarsky.SecureFileUploadFunction.Services
 {
