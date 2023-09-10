@@ -1,8 +1,11 @@
 name: Canary
+
 on:
   push:
     branches:
     - v2
+    - master
+
 env:
   AZURE_FUNCTIONAPP_NAME: secure-file-upload-function-canary
   AZURE_FUNCTIONAPP_PACKAGE_PATH: src/DZarsky.SecureFileUploadFunction/.

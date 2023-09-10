@@ -1,8 +1,10 @@
-name: CI/CD
+name: v1
+
 on:
   push:
     branches:
-    - master
+    - v1
+
 env:
   AZURE_FUNCTIONAPP_NAME: secure-file-upload-function
   AZURE_FUNCTIONAPP_PACKAGE_PATH: src/DZarsky.SecureFileUploadFunction/.
