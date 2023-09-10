@@ -1,12 +1,13 @@
-name: v1
+name: Canary
 
 on:
   push:
     branches:
-    - v1
+    - v2
+    - master
 
 env:
-  AZURE_FUNCTIONAPP_NAME: secure-file-upload-function
+  AZURE_FUNCTIONAPP_NAME: secure-file-upload-function-canary
   AZURE_FUNCTIONAPP_PACKAGE_PATH: src/DZarsky.SecureFileUploadFunction/.
   CONFIGURATION: Release
   DOTNET_CORE_VERSION: 6.0.x
@@ -15,15 +16,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@master
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
+    - uses: actions/checkout@v3
+    - name: Setup .NET SDK
+      uses: actions/setup-dotnet@v3
       with:
         dotnet-version: ${{ env.DOTNET_CORE_VERSION }}
-    - name: Restore
-      run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
     - name: Add NuGet source
       run: dotnet nuget add source https://nuget.dzarsky.eu/v3/index.json -n nuget.dzarsky.eu
+    - name: Restore
+      run: dotnet restore "${{ env.WORKING_DIRECTORY }}"
     - name: Build
       run: dotnet build "${{ env.WORKING_DIRECTORY }}" --configuration ${{ env.CONFIGURATION }} --no-restore
     - name: Publish
@@ -31,7 +32,7 @@ jobs:
     - name: Publish Artifacts
       uses: actions/upload-artifact@v1.0.0
       with:
-        name: functionapp
+        name: functionapp-canary
         path: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
   deploy:
     runs-on: ubuntu-latest
@@ -40,11 +41,12 @@ jobs:
     - name: Download artifact from build job
       uses: actions/download-artifact@v2
       with:
-        name: functionapp
+        name: functionapp-canary
         path: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
     - name: Deploy to Azure Function App
       uses: Azure/functions-action@v1
       with:
         app-name: ${{ env.AZURE_FUNCTIONAPP_NAME }}
-        publish-profile: ${{ secrets.secure_file_upload_function_06C0 }}
+        publish-profile: ${{ secrets.secure_file_upload_function_canary_0161 }}
         package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
+
