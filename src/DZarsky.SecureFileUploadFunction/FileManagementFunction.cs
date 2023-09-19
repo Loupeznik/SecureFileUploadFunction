@@ -143,6 +143,44 @@ namespace DZarsky.SecureFileUploadFunction
                 return new BadRequestObjectResult(new ErrorResponse(ex.Message));
             }
         }
+        
+        [FunctionName("DeleteFile")]
+        [OpenApiOperation(operationId: "DeleteFile", tags: new[] { ApiConstants.FilesSectionName })]
+        [OpenApiSecurity(ApiConstants.BasicAuthSchemeID, SecuritySchemeType.Http, Scheme = OpenApiSecuritySchemeType.Basic)]
+        [OpenApiResponseWithBody(statusCode: HttpStatusCode.OK, contentType: "application/octet-stream", bodyType: typeof(object), Description = "Delete file by ID")]
+        public async Task<ActionResult> DeleteFile(
+            [HttpTrigger(AuthorizationLevel.Anonymous, "delete", Route = ApiConstants.FilesSectionName + "/{fileName}")] HttpRequest req, string fileName)
+        {
+            var authResult = await Authorize(req);
+
+            if (authResult.Status != AuthResultStatus.Success)
+            {
+                return new UnauthorizedResult();
+            }
+
+            try
+            {
+                var result = await _fileService.DeleteFile(authResult.UserID, fileName);
+
+                if (!result)
+                {
+                    return new NotFoundObjectResult(new ProblemDetails
+                    {
+                        Title = "Not found",
+                        Detail = "File not found",
+                        Status = 404
+                    });
+                }
+
+                return new NoContentResult();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError("Could download file", ex);
+
+                return new BadRequestObjectResult(new ErrorResponse(ex.Message));
+            }
+        }
 
         private async Task<AuthResult> Authorize(HttpRequest request) => await _authManager.ValidateToken(request.Headers.Authorization);
     }

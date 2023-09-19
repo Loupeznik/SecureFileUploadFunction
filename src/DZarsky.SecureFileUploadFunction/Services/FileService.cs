@@ -73,6 +73,13 @@ namespace DZarsky.SecureFileUploadFunction.Services
 
             return new BlobResultWrapper<GetFileResult>(ResultStatus.Success, result: new GetFileResult(tempPath, MimeTypeHelper.ResolveMimeType(tempPath)));
         }
+        
+        public async Task<bool> DeleteFile(string userId, string fileName)
+        {
+            var blobClient = GetBlobClient(userId, fileName);
+
+            return (await blobClient.DeleteIfExistsAsync()).Value;
+        }
 
         private async Task CreateContainer(string userId) => await GetBlobContainerClient(userId).CreateAsync();
 
