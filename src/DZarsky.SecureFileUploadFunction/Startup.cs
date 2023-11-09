@@ -7,21 +7,24 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 [assembly: FunctionsStartup(typeof(DZarsky.SecureFileUploadFunction.Startup))]
-namespace DZarsky.SecureFileUploadFunction;
 
-internal class Startup : FunctionsStartup
+namespace DZarsky.SecureFileUploadFunction
 {
-    private static readonly IConfigurationRoot Configuration = new ConfigurationBuilder()
-                                                               .SetBasePath(Environment.CurrentDirectory)
-                                                               .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
-                                                               .AddEnvironmentVariables()
-                                                               .AddUserSecrets<Startup>(true)
-                                                               .Build();
-
-    public override void Configure(IFunctionsHostBuilder builder)
+    internal class Startup : FunctionsStartup
     {
-        builder.AddCommonFunctionServices(Configuration, AuthType.Zitadel, false);
+        private static readonly IConfigurationRoot Configuration = new ConfigurationBuilder()
+                                                                   .SetBasePath(Environment.CurrentDirectory)
+                                                                   .AddJsonFile("appsettings.json", optional: true,
+                                                                       reloadOnChange: true)
+                                                                   .AddEnvironmentVariables()
+                                                                   .AddUserSecrets<Startup>(true)
+                                                                   .Build();
 
-        builder.Services.AddScoped<FileService>();
+        public override void Configure(IFunctionsHostBuilder builder)
+        {
+            builder.AddCommonFunctionServices(Configuration, AuthType.Zitadel, false);
+
+            builder.Services.AddScoped<FileService>();
+        }
     }
 }
